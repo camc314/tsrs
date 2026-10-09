@@ -138,7 +138,7 @@ pub(crate) fn new_checker_pool(mut opts: CheckerPoolOptions, program: &'static P
         opts,
         mu: Mutex::new(checkerPoolState {
             discarded: false,
-            checkers: (0..opts.max_checkers).map(|_| None).collect(),
+            checkers: std::iter::repeat_with(|| None).take(opts.max_checkers).collect(),
             held_by: vec![String::new(); opts.max_checkers],
             file_associations: FxHashMap::default(),
             request_associations: FxHashMap::default(),

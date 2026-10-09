@@ -100,8 +100,8 @@ pub(crate) fn report(program: &'static Program, pool: &crate::checkerpool::check
     let categories: Vec<Category> = files.iter().map(|&f| category(program, f, &project_dir)).collect();
 
     // work[c][file] = linked nodes + linked symbols
-    let work: Vec<Mutex<Vec<u64>>> = (0..k).map(|_| Mutex::new(Vec::new())).collect();
-    let counters: Vec<Mutex<(u64, u64, u64)>> = (0..k).map(|_| Mutex::new((0, 0, 0))).collect();
+    let work: Vec<Mutex<Vec<u64>>> = std::iter::repeat_with(|| Mutex::new(Vec::new())).take(k).collect();
+    let counters: Vec<Mutex<(u64, u64, u64)>> = std::iter::repeat_with(|| Mutex::new((0, 0, 0))).take(k).collect();
     pool.for_each_checker_parallel(|idx, c| {
         let w: Vec<u64> = files
             .iter()
@@ -237,7 +237,7 @@ fn created_by_file(program: &'static Program, pool: &crate::checkerpool::checker
         index.get(&tsrs_ast::get_source_file_of_node(decl)?).copied()
     };
     let k = pool.checker_count();
-    let result: Vec<Mutex<Created>> = (0..k).map(|_| Mutex::new((Vec::new(), Vec::new(), 0, 0))).collect();
+    let result: Vec<Mutex<Created>> = std::iter::repeat_with(|| Mutex::new((Vec::new(), Vec::new(), 0, 0))).take(k).collect();
     pool.for_each_checker_parallel(|idx, c| {
         let mut types = vec![0u64; files.len()];
         let mut symbols = vec![0u64; files.len()];

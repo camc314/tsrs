@@ -102,7 +102,7 @@ impl<K: 'static, V: Default + 'static> LinkStore<K, V> {
                 let index = self.len;
                 slot.insert(LinkSlot { key, index });
                 if index as usize % LINK_CHUNK == 0 {
-                    self.chunks.push(PSlot::first(alloc_vec((0..LINK_CHUNK).map(|_| PSlot(V::default())).collect())));
+                    self.chunks.push(PSlot::first(alloc_vec(std::iter::repeat_with(|| PSlot(V::default())).take(LINK_CHUNK).collect())));
                 }
                 self.len += 1;
                 index
@@ -197,7 +197,7 @@ impl<K: 'static, V: KeyedLinks + Default + 'static> KeyedLinkStore<K, V> {
                 tsrs_core::sitecount::hit("links", std::any::type_name::<V>());
                 let index = self.len;
                 if index as usize % LINK_CHUNK == 0 {
-                    self.chunks.push(PSlot::first(alloc_vec((0..LINK_CHUNK).map(|_| PSlot(V::default())).collect())));
+                    self.chunks.push(PSlot::first(alloc_vec(std::iter::repeat_with(|| PSlot(V::default())).take(LINK_CHUNK).collect())));
                 }
                 self.len += 1;
                 let value = keyed_at(&self.chunks, index);
@@ -422,7 +422,7 @@ impl<V: Default + 'static> IdLinkStore<V> {
         tsrs_core::sitecount::hit("links", std::any::type_name::<V>());
         let slot = self.len;
         if slot as usize % ID_LINK_CHUNK == 0 {
-            self.chunks.push(PSlot::first(alloc_vec((0..ID_LINK_CHUNK).map(|_| PSlot(V::default())).collect())));
+            self.chunks.push(PSlot::first(alloc_vec(std::iter::repeat_with(|| PSlot(V::default())).take(ID_LINK_CHUNK).collect())));
         }
         self.len += 1;
         if id <= u32::MAX as u64 {
@@ -806,7 +806,7 @@ mod tests {
     // never referenced must read as `None` without getting a record.
     #[test]
     fn reference_kinds_accumulate_in_their_slots() {
-        let symbols: Vec<P<Symbol>> = (0..20_000).map(|_| P::new(Symbol::default())).collect();
+        let symbols: Vec<P<Symbol>> = std::iter::repeat_with(|| P::new(Symbol::default())).take(20_000).collect();
         let mut store = SymbolReferenceLinkStore::default();
         for (i, &symbol) in symbols.iter().enumerate().filter(|(i, _)| i % 3 != 0) {
             store.add_reference_kinds(symbol, SymbolFlags::Value);

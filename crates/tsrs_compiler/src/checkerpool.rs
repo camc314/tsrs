@@ -583,7 +583,7 @@ impl checkerPool {
                 let create_start = std::time::Instant::now();
                 #[cfg(feature = "checker")]
                 tsrs_checker::links::set_multiple_checkers(self.checker_count > 1);
-                let slots: Vec<Mutex<Option<CheckerSlot>>> = (0..self.checker_count).map(|_| Mutex::new(None)).collect();
+                let slots: Vec<Mutex<Option<CheckerSlot>>> = std::iter::repeat_with(|| Mutex::new(None)).take(self.checker_count).collect();
                 run_work_group(self.single_threaded, self.checker_count, |i| {
                     *slots[i].lock().unwrap() = Some(CheckerSlot(Mutex::new(new_checker(program))));
                 });
@@ -651,7 +651,7 @@ impl checkerPool {
     // checkerpool.go:464
     pub(crate) fn get_global_diagnostics(&self) -> Vec<P<Diagnostic>> {
         let state = self.create_checkers();
-        let global_diagnostics: Vec<Mutex<Vec<P<Diagnostic>>>> = (0..state.checkers.len()).map(|_| Mutex::new(Vec::new())).collect();
+        let global_diagnostics: Vec<Mutex<Vec<P<Diagnostic>>>> = std::iter::repeat_with(|| Mutex::new(Vec::new())).take(state.checkers.len()).collect();
         self.for_each_checker_parallel(|idx, checker| {
             *global_diagnostics[idx].lock().unwrap() = checker.get_global_diagnostics();
         });
@@ -690,9 +690,9 @@ impl checkerPool {
         let state = self.create_checkers();
         let stats = assignment_stats_enabled();
         let n = state.checkers.len();
-        let times: Vec<Mutex<(f64, usize)>> = if stats { (0..n).map(|_| Mutex::new((0.0, 0))).collect() } else { Vec::new() };
-        let cpu: Vec<Mutex<f64>> = if stats { (0..n).map(|_| Mutex::new(0.0)).collect() } else { Vec::new() };
-        let stolen: Vec<std::sync::atomic::AtomicUsize> = (0..n).map(|_| std::sync::atomic::AtomicUsize::new(0)).collect();
+        let times: Vec<Mutex<(f64, usize)>> = if stats { std::iter::repeat_with(|| Mutex::new((0.0, 0))).take(n).collect() } else { Vec::new() };
+        let cpu: Vec<Mutex<f64>> = if stats { std::iter::repeat_with(|| Mutex::new(0.0)).take(n).collect() } else { Vec::new() };
+        let stolen: Vec<std::sync::atomic::AtomicUsize> = std::iter::repeat_with(|| std::sync::atomic::AtomicUsize::new(0)).take(n).collect();
         let file_times = file_times_path().is_some();
         let cost_cache = checker_cost_cache_path().is_some() && n > 1;
         // Each checker's positions in `files`, in the order of `files` (visit_order).
@@ -1133,7 +1133,7 @@ fn compute_associations(program: &Program, checker_count: usize) -> Vec<usize> {
         CheckerAssignment::Locality => locality_associations(program, checker_count),
         CheckerAssignment::Random(seed) => {
             let mut state = seed;
-            (0..program.files.len()).map(|_| (splitmix64(&mut state) % checker_count as u64) as usize).collect()
+            std::iter::repeat_with(|| (splitmix64(&mut state) % checker_count as u64) as usize).take(program.files.len()).collect()
         }
         CheckerAssignment::File(path) => {
             let text = std::fs::read_to_string(path).expect("TSRS_CHECKER_ASSIGNMENT file");
